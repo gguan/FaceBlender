@@ -166,9 +166,15 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
             return {"CANCELLED"}
 
         # ---- Load landmark mapping ------------------------------------------
-        from .landmark_mapping import load_mapping, get_3d_landmarks
-        from .camera_alignment import align_camera
-        from .utils import opencv_to_blender, focal_length_px_to_mm, compute_shift
+        from .landmark_mapping import load_mapping
+        from .camera_alignment import align_camera, get_image_size
+        from .utils import (
+            compute_shift,
+            estimate_focal_length,
+            focal_length_mm_to_px,
+            focal_length_px_to_mm,
+            opencv_to_blender,
+        )
 
         custom_mapping_path = props.custom_landmark_mapping.strip() or None
         try:
@@ -176,6 +182,31 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
         except (FileNotFoundError, KeyError) as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
+
+        # ---- Derive focal length for the solve ------------------------------
+        cam_data = cam_obj.data
+        try:
+            image_width, image_height = get_image_size(image_path)
+        except ImportError as err:
+            self.report({"ERROR"}, f"Missing dependency: {err}")
+            return {"CANCELLED"}
+        except FileNotFoundError as err:
+            self.report({"ERROR"}, str(err))
+            return {"CANCELLED"}
+
+        focal_source = "camera"
+        try:
+            initial_focal_px = focal_length_mm_to_px(
+                focal_length_mm=cam_data.lens,
+                sensor_width_mm=cam_data.sensor_width,
+                sensor_height_mm=cam_data.sensor_height,
+                image_width_px=image_width,
+                image_height_px=image_height,
+                sensor_fit=cam_data.sensor_fit,
+            )
+        except ValueError:
+            initial_focal_px = estimate_focal_length(image_width, image_height)
+            focal_source = "heuristic"
 
         # ---- Run alignment --------------------------------------------------
         backend = props.landmark_backend
@@ -188,6 +219,7 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
                 landmark_mapping=mapping,
                 backend=backend,
                 dlib_predictor_path=dlib_path,
+                focal_length_px=initial_focal_px,
             )
         except ImportError as err:
             self.report({"ERROR"}, f"Missing dependency: {err}")
@@ -207,11 +239,16 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
         cam_obj.matrix_world = world_matrix
 
         # ---- Apply intrinsics to camera ------------------------------------
-        cam_data = cam_obj.data
-        sensor_width_mm = cam_data.sensor_width  # Blender default 36 mm
-
-        focal_mm = focal_length_px_to_mm(focal_px, sensor_width_mm, img_w)
-        cam_data.lens = focal_mm
+        if focal_source == "camera":
+            focal_mm = focal_length_px_to_mm(
+                focal_length_px=focal_px,
+                sensor_width_mm=cam_data.sensor_width,
+                sensor_height_mm=cam_data.sensor_height,
+                image_width_px=img_w,
+                image_height_px=img_h,
+                sensor_fit=cam_data.sensor_fit,
+            )
+            cam_data.lens = focal_mm
         cam_data.sensor_fit = "AUTO"
 
         # Set render resolution to match the reference image so the camera
@@ -228,6 +265,12 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
 
         # ---- Set background image ------------------------------------------
         self._set_background_image(cam_data, image_path, img_w, img_h)
+
+        if focal_source == "heuristic":
+            self.report(
+                {"WARNING"},
+                "Used fallback focal length heuristic for alignment; kept the current camera lens.",
+            )
 
         self.report({"INFO"}, f"Camera aligned to {image_item.name}")
         return {"FINISHED"}

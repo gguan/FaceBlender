@@ -16,6 +16,16 @@ _DEFAULT_MAPPING_FILE = os.path.join(_DATA_DIR, "flame_landmark_mapping.json")
 _mapping_cache: dict | None = None
 
 
+def _validate_mapping(mapping: dict[int, int]) -> None:
+    """Validate landmark-to-vertex mapping entries before use."""
+    negative_vertices = {lm_idx: v_idx for lm_idx, v_idx in mapping.items() if v_idx < 0}
+    if negative_vertices:
+        raise ValueError(
+            "Landmark mapping contains negative vertex indices: "
+            f"{negative_vertices}"
+        )
+
+
 def load_mapping(json_path: str | None = None) -> dict[int, int]:
     """
     Load a landmark-to-vertex mapping from a JSON file.
@@ -54,6 +64,7 @@ def load_mapping(json_path: str | None = None) -> dict[int, int]:
         raise KeyError(f"JSON file '{json_path}' does not contain a 'mapping' key.")
 
     mapping = {int(k): int(v) for k, v in data["mapping"].items()}
+    _validate_mapping(mapping)
 
     # Cache the built-in mapping
     if json_path == _DEFAULT_MAPPING_FILE:
@@ -106,6 +117,10 @@ def get_3d_landmarks(mesh_obj, mapping: dict[int, int]) -> tuple[list[int], list
 
     for lm_idx in sorted(mapping.keys()):
         v_idx = mapping[lm_idx]
+        if v_idx < 0:
+            raise ValueError(
+                f"Landmark {lm_idx} maps to negative vertex index {v_idx}."
+            )
         if v_idx > max_vertex:
             # Skip landmarks whose vertex index exceeds the mesh's vertex count
             continue

@@ -7,6 +7,19 @@ import numpy as np
 import mathutils
 
 
+def resolve_sensor_fit(sensor_fit, image_width_px, image_height_px):
+    """
+    Resolve Blender's sensor fit mode for the given output dimensions.
+
+    ``AUTO`` maps to horizontal fit for landscape/square images and vertical
+    fit for portrait images.
+    """
+    fit = (sensor_fit or "AUTO").upper()
+    if fit == "AUTO":
+        return "HORIZONTAL" if image_width_px >= image_height_px else "VERTICAL"
+    return fit
+
+
 def opencv_to_blender(R, t):
     """
     Convert OpenCV camera extrinsics (R, t) to a Blender camera world matrix.
@@ -42,19 +55,52 @@ def opencv_to_blender(R, t):
     return mathutils.Matrix(Rt_inv.tolist())
 
 
-def focal_length_px_to_mm(focal_length_px, sensor_width_mm, image_width_px):
+def focal_length_px_to_mm(
+    focal_length_px,
+    sensor_width_mm,
+    sensor_height_mm,
+    image_width_px,
+    image_height_px,
+    sensor_fit="AUTO",
+):
     """
-    Convert focal length from pixels to millimetres using the sensor width.
+    Convert focal length from pixels to millimetres using Blender's sensor fit.
 
     Args:
         focal_length_px (float): Focal length in pixels.
-        sensor_width_mm (float): Camera sensor width in mm (Blender default is 36 mm).
+        sensor_width_mm (float): Camera sensor width in mm.
+        sensor_height_mm (float): Camera sensor height in mm.
         image_width_px (int): Image width in pixels.
+        image_height_px (int): Image height in pixels.
+        sensor_fit (str): Blender sensor fit mode.
 
     Returns:
         float: Focal length in mm.
     """
+    fit = resolve_sensor_fit(sensor_fit, image_width_px, image_height_px)
+    if fit == "VERTICAL":
+        return focal_length_px * sensor_height_mm / image_height_px
     return focal_length_px * sensor_width_mm / image_width_px
+
+
+def focal_length_mm_to_px(
+    focal_length_mm,
+    sensor_width_mm,
+    sensor_height_mm,
+    image_width_px,
+    image_height_px,
+    sensor_fit="AUTO",
+):
+    """
+    Convert focal length from millimetres to pixels using Blender's sensor fit.
+    """
+    if focal_length_mm <= 0:
+        raise ValueError("Focal length in millimetres must be positive.")
+
+    fit = resolve_sensor_fit(sensor_fit, image_width_px, image_height_px)
+    if fit == "VERTICAL":
+        return focal_length_mm * image_height_px / sensor_height_mm
+    return focal_length_mm * image_width_px / sensor_width_mm
 
 
 def estimate_focal_length(image_width, image_height, scale=1.2):

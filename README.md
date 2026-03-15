@@ -13,7 +13,9 @@ accurate camera alignment and facial landmark functionality.
 3. For each photo, clicking the **camera icon** next to the image automatically:
    - Detects 68 facial landmarks in the photo (via MediaPipe or dlib).
    - Maps those landmarks to 3D vertex positions on your head mesh.
-   - Runs OpenCV's `solvePnP` to estimate camera extrinsics and focal length.
+   - Runs OpenCV's `solvePnP` to estimate camera extrinsics using the active
+     camera focal length as the solve input (falling back to a heuristic only
+     if the camera lens is invalid).
    - Converts the result from OpenCV convention (Y-down, Z-forward) to Blender's
      coordinate system (Y-up, Z-backward) and applies it to the active camera.
    - Displays the photo as a semi-transparent background image in the camera view.

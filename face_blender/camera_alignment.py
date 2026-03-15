@@ -43,6 +43,16 @@ def _try_dlib():
         return None
 
 
+def get_image_size(image_path: str) -> tuple[int, int]:
+    """Return ``(width, height)`` for an image using OpenCV."""
+    cv2 = _require_cv2()
+    image_bgr = cv2.imread(image_path)
+    if image_bgr is None:
+        raise FileNotFoundError(f"Could not read image: {image_path}")
+    image_height, image_width = image_bgr.shape[:2]
+    return image_width, image_height
+
+
 # ---------------------------------------------------------------------------
 # Landmark detection
 # ---------------------------------------------------------------------------
@@ -283,13 +293,7 @@ def align_camera(
     """
     from . import landmark_mapping as lm_module
 
-    cv2 = _require_cv2()
-
-    # Read image dimensions
-    img = cv2.imread(image_path)
-    if img is None:
-        raise FileNotFoundError(f"Could not read image: {image_path}")
-    image_height, image_width = img.shape[:2]
+    image_width, image_height = get_image_size(image_path)
 
     # Step 1: detect 2D landmarks
     detected_lm_indices, points_2d = detect_landmarks(
