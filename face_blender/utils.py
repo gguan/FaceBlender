@@ -97,7 +97,23 @@ def compute_shift(cx, cy, image_width, image_height):
     """
     Compute Blender camera shift values from principal point offset.
 
-    Blender's shift_x / shift_y are normalised by the longer sensor dimension.
+    In Blender's ``SENSOR_FIT_AUTO`` mode (the default), both ``shift_x`` and
+    ``shift_y`` are expressed as a fraction of the **sensor width**, which maps
+    to ``image_width`` pixels.  Concretely:
+
+    * ``shift_x = (cx - image_width / 2) / image_width``
+    * ``shift_y = -(cy - image_height / 2) / image_width``
+
+    The Y axis is negated because Blender's Y points upward while image Y
+    points downward.
+
+    This function assumes ``SENSOR_FIT_AUTO`` with ``image_width >= image_height``
+    (landscape or square).  For portrait images (``image_height > image_width``)
+    Blender switches the reference dimension to ``image_height``; in that case
+    both shift values should be divided by ``image_height`` instead.  Since the
+    current pipeline always passes the principal point at the image centre
+    (``cx = image_width / 2``, ``cy = image_height / 2``), the resulting shift
+    is always zero and the orientation does not affect the output.
 
     Args:
         cx (float): Principal point x in pixels.
@@ -112,9 +128,9 @@ def compute_shift(cx, cy, image_width, image_height):
     offset_x = cx - image_width / 2.0
     offset_y = cy - image_height / 2.0
 
-    # Normalise by the larger dimension so the values match Blender's convention
-    max_dim = max(image_width, image_height)
-    shift_x = offset_x / max_dim
-    shift_y = -offset_y / max_dim  # Blender Y is flipped relative to image Y
+    # Normalise by image_width — Blender uses sensor_width as the reference
+    # dimension for both axes in SENSOR_FIT_AUTO mode.
+    shift_x = offset_x / image_width
+    shift_y = -offset_y / image_width  # Blender Y is flipped relative to image Y
 
     return shift_x, shift_y
