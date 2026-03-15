@@ -97,8 +97,6 @@ def get_3d_landmarks(mesh_obj, mapping: dict[int, int]) -> tuple[list[int], list
         sorted list of landmark indices present in *mapping* and *points_3d* is
         a list of ``[x, y, z]`` world-space coordinates.
     """
-    import numpy as np
-
     vertices = mesh_obj.data.vertices
     world_matrix = mesh_obj.matrix_world
     max_vertex = len(vertices) - 1

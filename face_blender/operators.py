@@ -212,6 +212,12 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
 
         focal_mm = focal_length_px_to_mm(focal_px, sensor_width_mm, img_w)
         cam_data.lens = focal_mm
+        cam_data.sensor_fit = "AUTO"
+
+        # Set render resolution to match the reference image so the camera
+        # frustum aspect ratio and background image display correctly.
+        scene.render.resolution_x = img_w
+        scene.render.resolution_y = img_h
 
         # Principal point shift (only if not centred)
         cx = img_w / 2.0
