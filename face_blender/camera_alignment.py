@@ -8,6 +8,8 @@ returns the camera extrinsics together with an estimated focal length.
 
 import numpy as np
 
+from . import landmark_mapping as lm_module
+
 # ---------------------------------------------------------------------------
 # Optional dependency helpers
 # ---------------------------------------------------------------------------
@@ -268,7 +270,7 @@ def solve_pnp(
 def align_camera(
     image_path: str,
     mesh_obj,
-    landmark_mapping: dict,
+    lm_mapping: dict,
     backend: str = "mediapipe",
     dlib_predictor_path: str | None = None,
     focal_length_px: float | None = None,
@@ -283,7 +285,7 @@ def align_camera(
     Args:
         image_path: Absolute path to the reference photo.
         mesh_obj: Blender ``bpy.types.Object`` (mesh) representing the head.
-        landmark_mapping: ``{landmark_index: vertex_index}`` dict.
+        lm_mapping: ``{landmark_index: vertex_index}`` dict.
         backend: Landmark detection backend (``"mediapipe"`` or ``"dlib"``).
         dlib_predictor_path: Path to dlib predictor dat file (dlib backend only).
         focal_length_px: Optional focal length override in pixels.
@@ -291,8 +293,6 @@ def align_camera(
     Returns:
         tuple: ``(R, t, focal_length_px, image_width, image_height)``
     """
-    from . import landmark_mapping as lm_module
-
     image_width, image_height = get_image_size(image_path)
 
     # Step 1: detect 2D landmarks
@@ -301,7 +301,7 @@ def align_camera(
     )
 
     # Step 2: get 3D positions for the same landmark indices
-    available_lm_indices, points_3d = lm_module.get_3d_landmarks(mesh_obj, landmark_mapping)
+    available_lm_indices, points_3d = lm_module.get_3d_landmarks(mesh_obj, lm_mapping)
 
     # Intersect detected and available landmarks to get consistent pairs
     available_set = set(available_lm_indices)

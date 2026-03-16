@@ -73,6 +73,16 @@ def load_mapping(json_path: str | None = None) -> dict[int, int]:
     return mapping
 
 
+def clear_cache() -> None:
+    """Invalidate the built-in mapping cache.
+
+    Call this from the add-on's ``unregister()`` so that a fresh load occurs
+    when the add-on is re-enabled (e.g. after the mapping file is updated).
+    """
+    global _mapping_cache
+    _mapping_cache = None
+
+
 def get_vertex_indices(landmark_indices: list[int], mapping: dict[int, int]) -> list[int]:
     """
     Translate a list of landmark indices into mesh vertex indices.

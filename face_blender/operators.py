@@ -216,7 +216,7 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
             R, t, focal_px, img_w, img_h = align_camera(
                 image_path=image_path,
                 mesh_obj=props.head_object,
-                landmark_mapping=mapping,
+                lm_mapping=mapping,
                 backend=backend,
                 dlib_predictor_path=dlib_path,
                 focal_length_px=initial_focal_px,
@@ -239,16 +239,17 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
         cam_obj.matrix_world = world_matrix
 
         # ---- Apply intrinsics to camera ------------------------------------
-        if focal_source == "camera":
-            focal_mm = focal_length_px_to_mm(
-                focal_length_px=focal_px,
-                sensor_width_mm=cam_data.sensor_width,
-                sensor_height_mm=cam_data.sensor_height,
-                image_width_px=img_w,
-                image_height_px=img_h,
-                sensor_fit=cam_data.sensor_fit,
-            )
-            cam_data.lens = focal_mm
+        # Always write back the focal length used in the solve so that the
+        # camera's lens value is consistent with its world-space position.
+        focal_mm = focal_length_px_to_mm(
+            focal_length_px=focal_px,
+            sensor_width_mm=cam_data.sensor_width,
+            sensor_height_mm=cam_data.sensor_height,
+            image_width_px=img_w,
+            image_height_px=img_h,
+            sensor_fit=cam_data.sensor_fit,
+        )
+        cam_data.lens = focal_mm
         cam_data.sensor_fit = "AUTO"
 
         # Set render resolution to match the reference image so the camera
@@ -269,7 +270,7 @@ class FACEBLENDER_OT_align_camera(bpy.types.Operator):
         if focal_source == "heuristic":
             self.report(
                 {"WARNING"},
-                "Used fallback focal length heuristic for alignment; kept the current camera lens.",
+                "Used fallback focal length heuristic; camera lens set to estimated value.",
             )
 
         self.report({"INFO"}, f"Camera aligned to {image_item.name}")

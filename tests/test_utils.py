@@ -52,6 +52,24 @@ class UtilsTests(unittest.TestCase):
 
         self.assertAlmostEqual(focal_mm, 50.0)
 
+    def test_compute_shift_centered_is_zero(self):
+        shift_x, shift_y = self.utils.compute_shift(960, 540, 1920, 1080)
+        self.assertAlmostEqual(shift_x, 0.0)
+        self.assertAlmostEqual(shift_y, 0.0)
+
+    def test_compute_shift_landscape_normalises_by_width(self):
+        # Offset principal point 96px right in a 1920×1080 image
+        shift_x, shift_y = self.utils.compute_shift(1056, 540, 1920, 1080)
+        self.assertAlmostEqual(shift_x, 96 / 1920)
+        self.assertAlmostEqual(shift_y, 0.0)
+
+    def test_compute_shift_portrait_normalises_by_height(self):
+        # Offset principal point 96px down in a 1080×1920 portrait image.
+        # Blender uses image_height as the reference dimension for portrait.
+        shift_x, shift_y = self.utils.compute_shift(540, 1056, 1080, 1920)
+        self.assertAlmostEqual(shift_x, 0.0)
+        self.assertAlmostEqual(shift_y, -96 / 1920)
+
 
 if __name__ == "__main__":
     unittest.main()

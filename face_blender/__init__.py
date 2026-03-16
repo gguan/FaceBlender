@@ -33,10 +33,11 @@ def register():
 
 
 def unregister():
-    from . import panels, operators
+    from . import panels, operators, landmark_mapping
 
     operators.unregister()
     panels.unregister()
+    landmark_mapping.clear_cache()
 
 
 if __name__ == "__main__":
